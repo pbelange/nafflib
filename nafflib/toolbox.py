@@ -335,3 +335,136 @@ def generate_pure_KAM(
 
 
 # ---------------------------------------
+
+
+
+#===================================
+# Evaluation of tune 6D
+    
+def remove_from_list(l,elem):
+    _l = l.copy()
+    if elem in _l:
+        _l.remove(elem)
+    return _l
+
+def find_sidebands(A,Q,Qs,sideband_tol = 1e-1,power_fraction=1.0,min_separation=None,main_lines_iterations=3):
+
+     # If nans
+    if np.all(np.isnan(A)) or np.all(np.isnan(Q)):
+        return [np.nan],[np.nan]
+
+
+    # Keeping relevant power fraction and sorting by frequency
+    #-------------------------------------
+    n_harm = np.sum(np.cumsum(np.abs(A)**2/np.sum(np.abs(A)**2))<=power_fraction) + 1
+    A_srt    = np.array(A)[np.argsort(Q[:n_harm])]
+    Q_srt    = np.array(Q)[np.argsort(Q[:n_harm])]
+
+
+    # Excludng too-close peaks, keeping only main lines (iterate few times, to avoid keeping some noisy peaks)
+    #-------------------------------------
+    if min_separation is None:
+        min_separation = np.abs(Qs)/2
+    for _ in range(main_lines_iterations):
+        idx_vec     = np.arange(len(Q_srt))
+        freq_jumps  = [np.abs(Q_srt-_Q) for _Q in Q_srt]
+        main_lines  = list(set([idx_vec[jump<min_separation][np.argmax(np.abs(A_srt[jump<min_separation]))] for jump in freq_jumps]))
+        #----
+        A_srt    = A_srt[main_lines]
+        Q_srt    = Q_srt[main_lines]
+
+
+    # Keeping only sidebands
+    #-------------------------------------
+    idx_vec     = np.arange(len(Q_srt))
+    freq_jumps  = [np.abs(Q_srt-_Q) for _Q in Q_srt]
+    sband_groups= [remove_from_list(idx_vec[np.abs(_jump/Qs - np.round(_jump/Qs))<sideband_tol].tolist(),idx) for idx,_jump in enumerate(freq_jumps)]
+    sidebands   = list(set(sum(sband_groups,[])))
+    #----
+    A_srt    = A_srt[sidebands]
+    Q_srt    = Q_srt[sidebands]
+    
+
+    # Returning
+    return A_srt,Q_srt
+
+
+def LMS_penalty(residuals):
+    return np.log10(1e-16 + np.sqrt(1/(len(residuals)-1)* np.sum(residuals**2)))
+
+
+
+def evaluate_penalty(A_srt,Q_srt,As,Qs,sideband_tol=1e-1,q_max=2,w_kink=False):
+    idx_vec     = np.arange(len(Q_srt))
+    freq_jumps  = [np.abs(Q_srt-_Q) for _Q in Q_srt]
+
+
+    sband_groups= [idx_vec[np.abs(_jump/Qs - np.round(_jump/Qs))<sideband_tol].tolist() for idx,_jump in enumerate(freq_jumps)]
+
+    penalty_values = []
+    for (self_idx,_A),_Q,sband in zip(enumerate(A_srt),Q_srt,sband_groups):
+
+
+        # Extracting relevant phasors
+        observed = A_srt[sband]/np.abs(A_srt[sband])
+        q_values = np.round((Q_srt[sband] - _Q)/Qs).astype(int)
+
+
+        # Keeping only few lines around:
+        observed  = observed[np.abs(q_values)<q_max]
+        q_values  = q_values[np.abs(q_values)<q_max]
+
+        # Referencing to central line
+        observed = observed/observed[q_values==0]
+
+        # Adding penalty for too few lines
+        if len(q_values) <= 2:
+            penalty_values.append(np.inf)
+        
+        # Making sure we don't have fully asymmetric lines (linear trend would then be easily satisfied)
+        elif np.abs(sum(q_values))>=q_max:
+            penalty_values.append(np.inf)
+        else:
+
+            if w_kink:
+                target = np.exp(1j*(-np.abs(q_values)*np.pi/2)) * (As/np.abs(As))**(q_values) * np.exp(1j*np.pi*(q_values!=0).astype(int))
+            else:
+                target = np.exp(1j*(-np.abs(q_values)*np.pi/2)) * (As/np.abs(As))**(q_values)
+            
+            
+
+            residuals = np.abs(np.angle(observed) - np.angle(target))
+            penalty_values.append(LMS_penalty(residuals))
+
+
+    return penalty_values
+
+
+def find_tune_6D(A,Q,As,Qs,single_line_tol = 0.6,sideband_tol = 1e-1,power_fraction=1.0,min_separation=None,main_lines_iterations=3,force_positive  = False,q_max=2,w_kink=False):
+    
+    if force_positive:
+        A = np.array(A)[Q>10*np.abs(Qs)]
+        Q = np.array(Q)[Q>10*np.abs(Qs)]
+
+    # If single dominant like, return it
+    if np.abs(A[0])**2/np.sum(np.abs(A)**2) > single_line_tol:
+        return Q[0]
+    
+    # If nans
+    if np.all(np.isnan(A)) or np.all(np.isnan(Q)):
+        return np.nan
+
+
+    # Else, let's use the phase difference from the sidebands
+    A_srt,Q_srt = find_sidebands(np.array(A)[np.invert(np.isnan(Q))],np.array(Q)[np.invert(np.isnan(Q))],Qs,sideband_tol=sideband_tol,power_fraction=power_fraction,min_separation=min_separation,main_lines_iterations=main_lines_iterations)
+
+    
+
+    # Evaluating the penalty for each Q tested as tune
+    penalty_values = evaluate_penalty(A_srt,Q_srt,As,Qs,sideband_tol=sideband_tol,q_max=q_max,w_kink=w_kink)
+
+    # Returning winner
+    tune_idx = np.argmin(penalty_values)
+
+    return Q_srt[tune_idx]
+   
