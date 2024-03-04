@@ -248,3 +248,36 @@ def test_real_signal_tune():
             assert np.allclose(
                 np.abs(Q_vec), np.abs(Q_vec_z), atol=1e-5, rtol=0
             ), f"Tune difference too large between x-only and x-px @ {label} and window_order={w_order}"
+
+
+
+
+
+# -----
+# Henon map tune
+Q_h = 0.2064898024701758
+# -----
+example_signals_mp = []
+for x_start in np.linspace(0.1,0.3,100):
+    example_signals_mp.append(nafflib.henon_map(x_start, 0.35 * x_start, Q_h, int(1e4)))
+
+
+
+def test_multiprocessing():
+    # Testing multiparticle_tunes
+    multiparticles = [signal[0] - 1j * signal[1] for signal in example_signals_mp]
+
+    output_mp_off = nafflib.multiparticle_tunes(multiparticles,processes = None)
+    output_mp_on = nafflib.multiparticle_tunes(multiparticles,processes = 2)
+
+
+    assert np.all(output_mp_off==output_mp_on), 'multiprocesses introduced errors in multiparticle_tunes!'
+
+
+    output_mp_off = nafflib.multiparticle_harmonics(multiparticles,num_harmonics = 30,processes = None)
+    output_mp_on = nafflib.multiparticle_harmonics(multiparticles,num_harmonics = 30,processes = 2)
+
+
+    assert np.all(output_mp_off[0]==output_mp_on[0]), 'multiprocesses introduced errors in multiparticle_harmonics!'
+    assert np.all(output_mp_off[1]==output_mp_on[1]), 'multiprocesses introduced errors in multiparticle_harmonics!'
+

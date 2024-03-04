@@ -6,7 +6,6 @@ from .optimize import newton_method
 
 
 
-
 def _parse_real_signal(amplitudes, frequencies, rel_conjugate_tol=1e-2):
     """
     Parses a real signal from its complex representation, identifying and handling complex conjugates.
@@ -145,10 +144,9 @@ def fundamental_frequency(z, N=None, window_order=2, window_type="hann"):
     # Estimation of the main frequency with an FFT
     f0_est, resolution = _fft_f0_estimate(z_w)
 
-    # Preparing the estimate for the Newton refinement method
+    # Preparing the estimate for the refinement method
     if f0_est >= 0.5:
         f0_est = -(1.0 - f0_est)
-    f0_est = f0_est - resolution
 
     # Refinement of the tune calulation
     amplitude, f0 = newton_method(z_w, N, freq_estimate=f0_est, resolution=resolution)
@@ -340,7 +338,14 @@ def harmonics(
         return amplitudes, frequencies
 
 
-def multiparticle_tunes(x, px=None, window_order=2, window_type="hann"):
+
+def _tune_wrapper(args):
+    _x, _px, window_order, window_type = args
+    return tune(
+        _x, _px,window_order=window_order, window_type=window_type
+    )
+
+def multiparticle_tunes(x, px=None, window_order=2, window_type="hann", processes=None):
     """
     Calculates the tunes for multiple particles given their positions and optionally their momenta.
     This function computes the fundamental frequency for each particle individually.
@@ -356,6 +361,9 @@ def multiparticle_tunes(x, px=None, window_order=2, window_type="hann"):
         The order of the windowing function used in frequency analysis. Defaults to 2.
     window_type : str, optional
         The type of windowing function to apply. Defaults to 'hann'.
+    processes : int, optional
+        The number of processes to use in the calculation. If None, the multiprocessing is disabled.
+        WARNING: if a small number of particles is used, the overhead of multiprocessing will slow down the calculation.
 
     Returns
     -------
@@ -369,19 +377,33 @@ def multiparticle_tunes(x, px=None, window_order=2, window_type="hann"):
     if px is None:
         px = n_particles * [None]
     # --------------------
+    if processes is not None:
+        import multiprocessing as mp
+        args = [(_x, _px, window_order, window_type) for _x, _px in zip(x, px)]
+        
+        with mp.Pool(processes=processes) as pool:
+            results = pool.map(_tune_wrapper, args)
 
-    freq_i = np.zeros(np.shape(x)[0])
-    for ii in range(n_particles):
-        freq_i[ii] = tune(
-            x[ii], px[ii], window_order=window_order, window_type=window_type
-        )
+        freq_i = results
+
+    else:
+        freq_i = np.zeros(np.shape(x)[0])
+        for ii in range(n_particles):
+            freq_i[ii] = tune(
+                x[ii], px[ii], window_order=window_order, window_type=window_type
+            )
 
     return freq_i
 
 
+def _harmonics_wrapper(args):
+    _x, _px, num_harmonics, window_order, window_type = args
+    return harmonics(
+        _x, _px, num_harmonics=num_harmonics, window_order=window_order, window_type=window_type
+    )
+
 def multiparticle_harmonics(
-    x, px=None, num_harmonics=1, window_order=2, window_type="hann"
-):
+    x, px=None, num_harmonics=1, window_order=2, window_type="hann", processes=None):
     """
     Calculates the harmonics for multiple particles given their positions and optionally their momenta.
 
@@ -396,6 +418,9 @@ def multiparticle_harmonics(
         The order of the windowing function used in frequency analysis. Defaults to 2.
     window_type : str, optional
         The type of windowing function to apply. Defaults to 'hann'.
+    processes : int, optional
+        The number of processes to use in the calculation. If None, the multiprocessing is disabled.
+        WARNING: if a small number of particles is used, the overhead of multiprocessing will slow down the calculation.
 
     Returns
     -------
@@ -410,17 +435,27 @@ def multiparticle_harmonics(
         px = n_particles * [None]
     # --------------------
 
-    freq_i = []
-    amp_i = []
-    for _x, _px in zip(x, px):
-        _A, _Q = harmonics(
-            _x,
-            _px,
-            num_harmonics=num_harmonics,
-            window_order=window_order,
-            window_type=window_type,
-        )
-        amp_i.append(_A)
-        freq_i.append(_Q)
+    if processes is not None:
+        import multiprocessing as mp
+        args = [(_x, _px, num_harmonics, window_order, window_type) for _x, _px in zip(x, px)]
+        
+        with mp.Pool(processes=processes) as pool:
+            results = pool.map(_harmonics_wrapper, args)
+
+        amp_i, freq_i = zip(*results)
+    
+    else:
+        freq_i = []
+        amp_i = []
+        for _x, _px in zip(x, px):
+            _A, _Q = harmonics(
+                _x,
+                _px,
+                num_harmonics=num_harmonics,
+                window_order=window_order,
+                window_type=window_type,
+            )
+            amp_i.append(_A)
+            freq_i.append(_Q)
 
     return np.array(amp_i), np.array(freq_i)
