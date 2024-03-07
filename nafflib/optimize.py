@@ -3,7 +3,7 @@ import numba
 
 
 @numba.jit(nopython=True)
-def raise2powerArray(a, b):
+def expArray(omega, Nmax):
     """
     Raises a complex number 'a' to a series of powers up to 'b'.
 
@@ -23,9 +23,9 @@ def raise2powerArray(a, b):
         An array of complex numbers, each element being 'a' raised to increasing powers.
 
     """
-    out = np.zeros(b) + 1j * np.zeros(b)
+    out = np.zeros(Nmax) + 1j * np.zeros(Nmax)
     out[0] = 1
-    out[1] = a
+    out[1] = np.exp(omega)
     for i in range(1, len(out)):
         out[i] = out[i - 1] * out[1]
     return out
@@ -57,8 +57,8 @@ def laskar_dfft(freq, N, z):
     Nt = len(z)
 
     # Argument of the summation
-    # raise2power is used to save computation time, eq. to np.exp(-2*np.pi*1j*freq*N)
-    to_sum = 1 / Nt * raise2powerArray(np.exp(-2 * np.pi * 1j * freq), len(N)) * z
+    # expArray is used to save computation time, eq. to np.exp(-2*np.pi*1j*freq*N)
+    to_sum = 1 / Nt * expArray(-2 * np.pi * 1j * freq, len(N)) * z
 
     # Derivative factor
     deriv_factor = 1j * N
