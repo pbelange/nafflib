@@ -1,5 +1,5 @@
 import numpy as np
-from .optimize import laskar_dfft,expArray
+from .optimize import laskar_dfft,point_dfft,expArray
 from .windowing import hann
 from .naff import fundamental_frequency
 
@@ -93,7 +93,7 @@ def henon_map_4D(x, px, y, py, Qx, Qy, coupling, num_turns):
 
 # ---------------------------------------
 # from .naff import fundamental_frequency
-def fundamental_dfft(nu,z, N=None, window_order=2, window_type="hann"):
+def dfft(nu,z, N=None):
 
     # Initialisation
     # ---------------------
@@ -102,7 +102,7 @@ def fundamental_dfft(nu,z, N=None, window_order=2, window_type="hann"):
     # ---------------------
 
 
-    dfft = np.array([laskar_dfft(_f, N, z)[0] for _f in nu])
+    dfft = np.array([point_dfft(_f, N, z) for _f in nu])
     return dfft
 
 
@@ -131,7 +131,7 @@ def naff_dfft(nu, z, N=None, num_harmonics=1, window_order=2, window_type="hann"
         amp, freq = fundamental_frequency(_z*w_of_N, N=N)
 
         # Computing cfft
-        dfft = fundamental_dfft(nu,_z*w_of_N, N=N)
+        dfft = dfft(nu,_z*w_of_N, N=N)
 
         # Saving results
         A_dfft.append(dfft)

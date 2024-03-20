@@ -7,7 +7,7 @@ from .naff import (
     multiparticle_harmonics,
 )
 from .toolbox import (
-    fundamental_dfft,
+    dfft,
     naff_dfft,
     find_linear_combinations,
     generate_signal,

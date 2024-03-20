@@ -69,6 +69,17 @@ def laskar_dfft(freq, N, z):
     return _dfft, _dfft_derivative
 
 
+def point_dfft(freq, N, z):
+    """
+    """
+    Nt = len(z)
+
+    # Argument of the summation
+    # expArray is used to save computation time, eq. to np.exp(-2*np.pi*1j*freq*N)
+    to_sum = 1 / Nt * expArray(-2 * np.pi * 1j * freq, len(N)) * z
+    _dfft = np.sum(to_sum)
+    return _dfft
+
 def newton_method(
     z,
     N,
