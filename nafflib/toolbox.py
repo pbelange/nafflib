@@ -1,5 +1,5 @@
 import numpy as np
-from .optimize import laskar_dfft
+from .optimize import laskar_dfft,expArray
 from .windowing import hann
 from .naff import fundamental_frequency
 
@@ -101,41 +101,43 @@ def fundamental_dfft(nu,z, N=None, window_order=2, window_type="hann"):
         N = np.arange(len(z))
     # ---------------------
 
-    # Windowing of the signal
-    # ---------------------
-    window_fun = {"hann": hann}[window_type.lower()]
-    z_w = z * window_fun(N, order=window_order)
-    # ---------------------
 
-    dfft = np.array([laskar_dfft(_f, N, z_w)[0] for _f in nu])
+    dfft = np.array([laskar_dfft(_f, N, z)[0] for _f in nu])
     return dfft
 
 
-def naff_dfft(nu, z, num_harmonics=1, window_order=2, window_type="hann"):
+def naff_dfft(nu, z, N=None, num_harmonics=1, window_order=2, window_type="hann"):
 
     assert num_harmonics >= 1, "number_of_harmonics needs to be >= 1"
 
     # initialisation, creating a copy of the signal since we'll modify it
     # ---------------------
-    N = np.arange(len(z))
+    if N is None:
+        N = np.arange(len(z))
     _z = z.copy()
     # ---------------------
+
+    # Computing the window function
+    # ---------------------
+    window_fun = {"hann": hann}[window_type.lower()]
+    w_of_N = window_fun(N, order=window_order)
+    # ---------------------
+
 
     A_dfft = []
     for _ in range(num_harmonics):
 
         # Computing frequency and amplitude
-        amp, freq = fundamental_frequency(_z, N=N, window_order=window_order, window_type=window_type)
+        amp, freq = fundamental_frequency(_z*w_of_N, N=N)
 
         # Computing cfft
-        dfft = fundamental_dfft(nu,_z, N=N, window_order=window_order, window_type=window_type
-        )
+        dfft = fundamental_dfft(nu,_z*w_of_N, N=N)
 
         # Saving results
         A_dfft.append(dfft)
 
         # Substraction procedure
-        zgs = amp * np.exp(2 * np.pi * 1j * freq * N)
+        zgs = amp * expArray(2 * np.pi * 1j * freq, len(N))
         _z -= zgs
 
     return A_dfft
