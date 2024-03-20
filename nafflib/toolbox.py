@@ -92,18 +92,9 @@ def henon_map_4D(x, px, y, py, Qx, Qy, coupling, num_turns):
 
 
 # ---------------------------------------
-# from .naff import fundamental_frequency
-def dfft(nu,z, N=None):
-
-    # Initialisation
-    # ---------------------
-    if N is None:
-        N = np.arange(len(z))
-    # ---------------------
-
-
-    dfft = np.array([point_dfft(_f, N, z) for _f in nu])
-    return dfft
+def dfft(nu,z):
+    return np.array([point_dfft(_f, z) for _f in nu])
+#----------------------------------------
 
 
 def naff_dfft(nu, z, N=None, num_harmonics=1, window_order=2, window_type="hann"):
@@ -131,10 +122,10 @@ def naff_dfft(nu, z, N=None, num_harmonics=1, window_order=2, window_type="hann"
         amp, freq = fundamental_frequency(_z*w_of_N, N=N)
 
         # Computing cfft
-        dfft = dfft(nu,_z*w_of_N, N=N)
+        _dfft = dfft(nu,_z*w_of_N)
 
         # Saving results
-        A_dfft.append(dfft)
+        A_dfft.append(_dfft)
 
         # Substraction procedure
         zgs = amp * expArray(2 * np.pi * 1j * freq, len(N))
