@@ -1,6 +1,7 @@
 import numpy as np
-import nafflib
 
+import nafflib
+from nafflib.ndim import linear_combinations
 
 # =================================
 num_turns = int(3e4)
@@ -47,7 +48,7 @@ for file in files:
 
 def test_map():
     n_harm = 100
-    cmp_harm = 5
+    cmp_harm = 10
     N = np.arange(num_turns)
     for data in example_signals:
         Q_vec = [
@@ -78,12 +79,8 @@ def test_map():
             # Looking for matching harmonics
             # Sorting lines and compiling errors
             # -----------------------------------
-            r, _, _ = nafflib.find_linear_combinations(
-                Q[: int(2 * cmp_harm)], fundamental_tunes=Q_vec
-            )
-            r_found, _, _ = nafflib.find_linear_combinations(
-                Q_r[:cmp_harm], fundamental_tunes=Q_vec, max_harmonic_order=10
-            )
+            r = linear_combinations(Q[: int(2 * cmp_harm)]  ,Qvec=Q_vec,max_n=10,max_alias=2)
+            r_found = linear_combinations(Q_r[:cmp_harm]    ,Qvec=Q_vec,max_n=10,max_alias=2)
 
             errors_Q = []
             errors_A = []

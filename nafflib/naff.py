@@ -1,7 +1,14 @@
 import numpy as np
+import functools
 
 from .windowing import hann
 from .optimize import newton_method,expArray
+
+
+@functools.lru_cache(maxsize=10) 
+def N_ARANGE(size):
+    assert size < 2e9, "size should be smaller than 2e9 (int32 limit)"
+    return np.arange(size,dtype=np.int32)
 
 
 
@@ -107,7 +114,7 @@ def _fft_f0_estimate(z, force_len=None):
 
 
 
-def fundamental_frequency(z, N=None):
+def fundamental_frequency(z):
     """
     Finds the fundamental frequency of a signal using the NAFF algorithm. It applies a window,
     estimates the frequency using FFT, and then refines it with the Newton method.
@@ -116,8 +123,6 @@ def fundamental_frequency(z, N=None):
     ----------
     z : ndarray
         The complex signal array.
-    N : ndarray or None, optional
-        The array of turn numbers. If None, it defaults to a range equal to the length of z.
     window_order : int, optional
         The order of the windowing function. Defaults to 2.
     window_type : str, optional
@@ -131,8 +136,7 @@ def fundamental_frequency(z, N=None):
 
     # Initialisation
     # ---------------------
-    if N is None:
-        N = np.arange(len(z))
+    N = N_ARANGE(len(z))
     # ---------------------
 
     # Estimation of the main frequency with an FFT
@@ -148,7 +152,7 @@ def fundamental_frequency(z, N=None):
     return amplitude, f0
 
 
-def naff(z, N=None, num_harmonics=1, window_order=2, window_type="hann"):
+def naff(z,num_harmonics=1, window_order=2, window_type="hann"):
     """
     Applies the NAFF algorithm to find spectral lines of a signal. It identifies multiple harmonics
     of the signal, removes them, and repeats the process.
@@ -174,8 +178,7 @@ def naff(z, N=None, num_harmonics=1, window_order=2, window_type="hann"):
 
     # initialisation, creating a copy of the signal since we'll modify it
     # ---------------------
-    if N is None:
-        N = np.arange(len(z))
+    N  = N_ARANGE(len(z))
     _z = z.copy()
     # ---------------------
 
@@ -190,7 +193,7 @@ def naff(z, N=None, num_harmonics=1, window_order=2, window_type="hann"):
     for _ in range(num_harmonics):
 
         # Computing frequency and amplitude of the windowed signal
-        amp, freq = fundamental_frequency(_z*w_of_N, N=N)
+        amp, freq = fundamental_frequency(_z*w_of_N)
 
         # Saving results
         frequencies.append(freq)
@@ -203,7 +206,7 @@ def naff(z, N=None, num_harmonics=1, window_order=2, window_type="hann"):
     return np.array(amplitudes), np.array(frequencies)
 
 
-def tune(x, px=None, N=None,window_order=2, window_type="hann"):
+def tune(x, px=None,window_order=2, window_type="hann"):
     """
     Computes the tune (fundamental frequency) of a signal or a complex signal formed from x and px.
 
@@ -238,15 +241,12 @@ def tune(x, px=None, N=None,window_order=2, window_type="hann"):
             x, px = np.asarray(x), 0
             z = x - 1j * px
 
-    if N is None:
-        N = np.arange(len(z))
     # ---------------------
 
     # FOR COMPLEX SIGNAL:
     # ---------------------
     if not real_signal:
         amplitudes, frequencies = naff( z,
-                                        N=N,
                                         num_harmonics=1,
                                         window_order=window_order,
                                         window_type=window_type,
@@ -259,7 +259,6 @@ def tune(x, px=None, N=None,window_order=2, window_type="hann"):
         # Looking for 2n+1 many frequencies (for DC) then parsing the complex conjugates
         amplitudes, frequencies = naff(
             z,
-            N=N,
             num_harmonics=2 * 1 + 1,
             window_order=window_order,
             window_type=window_type,
@@ -270,7 +269,7 @@ def tune(x, px=None, N=None,window_order=2, window_type="hann"):
 
 
 def harmonics(
-    x, px=None, N=None,num_harmonics=1, window_order=2, window_type="hann", to_pandas=False
+    x, px=None,num_harmonics=1, window_order=2, window_type="hann", to_pandas=False
 ):
     """
     Identifies harmonics in a signal or a complex signal formed from x and px using the NAFF algorithm.
@@ -310,8 +309,6 @@ def harmonics(
             x, px = np.asarray(x), 0
             z = x - 1j * px
 
-    if N is None:
-        N = np.arange(len(z))
     # ---------------------
 
     # FOR COMPLEX SIGNAL:
@@ -319,7 +316,6 @@ def harmonics(
     if not real_signal:
         amplitudes, frequencies = naff(
             z,
-            N=N,
             num_harmonics=num_harmonics,
             window_order=window_order,
             window_type=window_type,
@@ -331,7 +327,6 @@ def harmonics(
         # Looking for 2n+1 many frequencies (for DC) then parsing the complex conjugates
         amplitudes, frequencies = naff(
             z,
-            N=N,
             num_harmonics=2 * num_harmonics + 1,
             window_order=window_order,
             window_type=window_type,
@@ -351,12 +346,12 @@ def harmonics(
 
 
 def _tune_wrapper(args):
-    _x, _px, N, window_order, window_type = args
+    _x, _px, window_order, window_type = args
     return tune(
-        _x, _px,N=N,window_order=window_order, window_type=window_type
+        _x, _px,window_order=window_order, window_type=window_type
     )
 
-def multiparticle_tunes(x, px=None, N=None,window_order=2, window_type="hann", processes=None):
+def multiparticle_tunes(x, px=None,window_order=2, window_type="hann", processes=None):
     """
     Calculates the tunes for multiple particles given their positions and optionally their momenta.
     This function computes the fundamental frequency for each particle individually.
@@ -383,18 +378,15 @@ def multiparticle_tunes(x, px=None, N=None,window_order=2, window_type="hann", p
     """
     n_particles = np.shape(x)[0]
 
-    # Initializating px and N
+    # Initializating px
     # --------------------
     if px is None:
         px = n_particles * [None]
-    
-    if N is None:
-        N = np.arange(len(x[0]))
     # --------------------
         
     if processes is not None:
         import multiprocessing as mp
-        args = [(_x, _px, N, window_order, window_type) for _x, _px in zip(x, px)]
+        args = [(_x, _px, window_order, window_type) for _x, _px in zip(x, px)]
         
         with mp.Pool(processes=processes) as pool:
             results = pool.map(_tune_wrapper, args)
@@ -405,20 +397,20 @@ def multiparticle_tunes(x, px=None, N=None,window_order=2, window_type="hann", p
         freq_i = np.zeros(np.shape(x)[0])
         for ii in range(n_particles):
             freq_i[ii] = tune(
-                x[ii], px[ii], N=N, window_order=window_order, window_type=window_type
+                x[ii], px[ii], window_order=window_order, window_type=window_type
             )
 
     return freq_i
 
 
 def _harmonics_wrapper(args):
-    _x, _px, N,num_harmonics, window_order, window_type = args
+    _x, _px,num_harmonics, window_order, window_type = args
     return harmonics(
-        _x, _px, N=N, num_harmonics=num_harmonics, window_order=window_order, window_type=window_type
+        _x, _px, num_harmonics=num_harmonics, window_order=window_order, window_type=window_type
     )
 
 def multiparticle_harmonics(
-    x, px=None, N=None,num_harmonics=1, window_order=2, window_type="hann", processes=None):
+    x, px=None,num_harmonics=1, window_order=2, window_type="hann", processes=None):
     """
     Calculates the harmonics for multiple particles given their positions and optionally their momenta.
 
@@ -448,13 +440,13 @@ def multiparticle_harmonics(
     # --------------------
     if px is None:
         px = n_particles * [None]
-    if N is None:
-        N = np.arange(len(x[0]))
+
+    N = N_ARANGE(len(x[0]))
     # --------------------
 
     if processes is not None:
         import multiprocessing as mp
-        args = [(_x, _px, N, num_harmonics, window_order, window_type) for _x, _px in zip(x, px)]
+        args = [(_x, _px, num_harmonics, window_order, window_type) for _x, _px in zip(x, px)]
         
         with mp.Pool(processes=processes) as pool:
             results = pool.map(_harmonics_wrapper, args)
@@ -468,7 +460,6 @@ def multiparticle_harmonics(
             _A, _Q = harmonics(
                 _x,
                 _px,
-                N=N,
                 num_harmonics=num_harmonics,
                 window_order=window_order,
                 window_type=window_type,

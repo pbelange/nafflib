@@ -1,4 +1,6 @@
 import numpy as np
+
+from nafflib.ndim import linear_combinations
 import nafflib
 
 
@@ -29,9 +31,8 @@ def test_parse_complex():
         )
         assert len(spectrum_z[1]) == 2 * n_harm, "Too few harmonics found for z"
 
-        r_z, _, _ = nafflib.find_linear_combinations(
-            spectrum_z[1], fundamental_tunes=[spectrum_z[1][0]]
-        )
+
+        r_z = linear_combinations(spectrum_z[1],Qvec=[spectrum_z[1][0]],max_n=10,max_alias=5)
 
         # x-only lines
         spectrum_x = nafflib.harmonics(
@@ -39,9 +40,9 @@ def test_parse_complex():
         )
         assert len(spectrum_x[1]) == n_harm, "Too few harmonics found for x"
 
-        r_x, _, _ = nafflib.find_linear_combinations(
-            spectrum_x[1], fundamental_tunes=[spectrum_x[1][0]]
-        )
+
+        r_x = linear_combinations(spectrum_x[1],Qvec=[spectrum_x[1][0]],max_n=10,max_alias=5)
+        
 
         # Scanning x-lines and comparing with z-lines
         errors_Q = []
@@ -76,18 +77,16 @@ def test_x_px_handling():
             x, px, num_harmonics=2 * n_harm, window_order=2, window_type="hann"
         )
         assert len(spectrum_x_px[1]) == 2 * n_harm, "Too few harmonics found for x-px"
-        r_x_px, _, _ = nafflib.find_linear_combinations(
-            spectrum_x_px[1], fundamental_tunes=[spectrum_x_px[1][0]]
-        )
+
+        r_x_px = linear_combinations(spectrum_x_px[1],Qvec=[spectrum_x_px[1][0]],max_n=10,max_alias=5)
 
         # x-only lines
         spectrum_x = nafflib.harmonics(
             x, num_harmonics=n_harm, window_order=2, window_type="hann"
         )
         assert len(spectrum_x[1]) == n_harm, "Too few harmonics found for x"
-        r_x, _, _ = nafflib.find_linear_combinations(
-            spectrum_x[1], fundamental_tunes=[spectrum_x[1][0]]
-        )
+
+        r_x = linear_combinations(spectrum_x[1],Qvec=[spectrum_x[1][0]],max_n=10,max_alias=5)
 
         # Scanning x-lines and comparing with z-lines
         errors_Q = []
@@ -120,9 +119,11 @@ def test_signal_generation():
         )
 
         # Finding linear combinations (high order for this 1D system!)
-        r, _, _ = nafflib.find_linear_combinations(
-            Q, fundamental_tunes=[Q[0]], max_harmonic_order=30
-        )
+        # r, _, _ = nafflib.find_linear_combinations(
+        #     Q, fundamental_tunes=[Q[0]], max_harmonic_order=30
+        # )
+        r = linear_combinations(Q,Qvec=[Q[0]],max_n=30,max_alias=5)
+        
 
         # Reconstructing signal 2 ways
         x_r, px_r = nafflib.generate_signal(A, Q, N)
@@ -181,13 +182,12 @@ def test_linear_combinations():
         )
 
         np.random.seed(0)
-        tol = 1e-10
+        tol = 1e-12
         frequencies *= 1 + np.random.uniform(tol, tol * 10, n_harm)
 
         # Looking for linear combinations
-        r_found, err, _ = nafflib.find_linear_combinations(
-            frequencies, fundamental_tunes=[Q0, Q1], max_harmonic_order=10
-        )
+
+        r_found,err,_ = linear_combinations(frequencies,Qvec=[Q0, Q1],max_n=10,max_alias=5,return_errors=True)
 
         assert np.all(
             np.array(r) == np.array(r_found)

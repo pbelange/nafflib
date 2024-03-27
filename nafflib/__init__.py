@@ -9,7 +9,6 @@ from .naff import (
 from .toolbox import (
     dfft,
     naff_dfft,
-    find_linear_combinations,
     generate_signal,
     generate_pure_KAM,
     henon_map,
