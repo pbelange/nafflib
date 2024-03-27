@@ -61,8 +61,8 @@ def invariant_tunes_6D(Ax,Ay,Az,Qx,Qy,Qz,limit_search=-1,max_n=20,max_alias=5,fi
 
     # Find the best combination
     #---------------------------------------------------------------------
-    idx_match   = np.argsort(np.abs(Iz_estimate-Iz_target))
-    Q123_match  = list(Q12_comb[idx_match[0]]) + [tune_z]
+    idx_match   = np.argmin(np.abs(Iz_estimate-Iz_target))
+    Q123_match  = list(Q12_comb[idx_match]) + [tune_z]
     #---------------------------------------------------------------------
 
 
@@ -79,11 +79,12 @@ def invariant_tunes_6D(Ax,Ay,Az,Qx,Qy,Qz,limit_search=-1,max_n=20,max_alias=5,fi
 
 
     if return_optimization:
+        sort_match  = np.argsort(np.abs(Iz_estimate-Iz_target))
         if Ixx<Ixy:
             # mislabeled Q! (just ensuring the first element is the matching tune, the rest is irrelevant)
-            return np.array([[Q12[1],Q12[0]] + [tune_z] for Q12 in Q12_comb])[idx_match], np.array(np.abs(Iz_estimate-Iz_target))[idx_match]
+            return np.array([[Q12[1],Q12[0]] + [tune_z] for Q12 in Q12_comb])[sort_match], np.array(np.abs(Iz_estimate-Iz_target))[sort_match]
         else:
-            return np.array([list(Q12) + [tune_z] for Q12 in Q12_comb])[idx_match], np.array(np.abs(Iz_estimate-Iz_target))[idx_match]
+            return np.array([list(Q12) + [tune_z] for Q12 in Q12_comb])[sort_match], np.array(np.abs(Iz_estimate-Iz_target))[sort_match]
         
     else:
         return Q123_match
