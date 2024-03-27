@@ -1,8 +1,7 @@
 import numpy as np
 
-from nafflib.ndim import linear_combinations
 import nafflib
-
+from nafflib.indexing import linear_combinations
 
 # -----
 # Henon map tune

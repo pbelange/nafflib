@@ -189,29 +189,8 @@ def invariant_6D(Ax,Ay,Az,nx,ny,nz):
 
 
 
-# Possible Names:
-#====================
-# NAOMI: Numerical Analysis Of Machine Invariants
-# NAOMI: Numerical Analysis Of Map Invariants
-# QDIM: Quasiperiodic Description of the Integrals of Motion   
-# NDIM: Numerical Description of the Integrals of Motion
-# NAIM: Numerical Analysis of the Integrals of Motion
-# NAQIM: Numerical Analysis of Quasiperiodic Integrals of Motion
-# NAFA: Numerical Analysis of the Fundamental Actions
-# NAFI: Numerical Analysis of the Fundamental Invariants
-# NAQT: Numerical Analysis of Quasiperiodic Trajectories
-# NAQT: Numerical Analysis of Quasiperiodic Tori
-# NAQI: Numerical Analysis of Quasiperiodic Invariants
-# QIAT: Quasiperiodic Invariant Analysis Toolbox
-# NIIM: Numerical Integration of the Integrals of Motion
-# NCIM: Numerical Computation of the Integrals of Motion
 
-# naff
-# naqi
-# qdim
-# naomi
-    
-    
-# naff
-# naim
+
+
+
 

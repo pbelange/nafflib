@@ -1,7 +1,7 @@
 import numpy as np
 
 import nafflib
-from nafflib.ndim import linear_combinations
+from nafflib.indexing import linear_combinations
 
 # ========================
 # -----

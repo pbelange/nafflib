@@ -1,7 +1,6 @@
 import numpy as np
-import functools
 
-from .optimize import laskar_dfft,point_dfft,expArray
+from .optimize import point_dfft,expArray
 from .windowing import hann
 from .naff import fundamental_frequency, N_ARANGE
 
