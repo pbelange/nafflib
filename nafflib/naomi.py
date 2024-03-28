@@ -101,6 +101,9 @@ def invariant_tunes_6D(Ax,Ay,Az,Qx,Qy,Qz,limit_search=-1,max_n=20,max_alias=5,fi
 #====================
 # NAOMI: Numerical Analysis Of Machine Invariants
 # NAOMI: Numerical Analysis Of Map Invariants
+# IMA  : Integrals of Motion Analysis
+# TCIM
+
 # QDIM: Quasiperiodic Description of the Integrals of Motion   
 # NDIM: Numerical Description of the Integrals of Motion
 # NAIM: Numerical Analysis of the Integrals of Motion
