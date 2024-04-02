@@ -8,6 +8,23 @@ def pdq_avg_integral(A,n,idx=0):
     return np.sum([nk[idx]*(np.abs(Ak)**2)/2 for Ak,nk in zip(A,n)])
     
 
+def pdq_integral(A,n,Theta,idx=0):
+    if not isinstance(Theta,list):
+        Theta = [Theta]
+    assert len(Theta) == len(n[0])-2, 'Theta should include all non-integrated angles, i.e. [Theta_y,Theta_zeta] for x-plane integration'
+    
+    # Computing the non-integrated phase (works for any number of dimensions)
+    n_tmp   = [nk[:idx] + nk[idx+1:] for nk in n]
+    phi     = [np.angle(Ak) + sum([nk[i]*Theta[i] for i in range(len(Theta))]) for Ak,nk in zip(A,n_tmp)]
+    
+    # Computing the full integral
+    return 1/2 * sum(np.abs(Ak)*np.abs(Aj)*nj[idx]*np.cos(phik-phij)    for nk,Ak,phik in zip(n,A,phi) 
+                                                                        for nj,Aj,phij in zip(n,A,phi) 
+                                                                        if nj[idx]==nk[idx])
+        
+        
+
+
 
 def invariant(A_list,n_list,idx=0):
     assert len(A_list) == len(n_list)
@@ -22,7 +39,7 @@ def invariant_6D(Ax,Ay,Az,nx,ny,nz):
     return Ix,Iy,Iz
 
 
-def invariant_tunes_6D(Ax,Ay,Az,Qx,Qy,Qz,limit_search=-1,max_n=20,max_alias=5,filter_Q = None,handpicked_QxQy = None,return_optimization=False,warning_tol = 1e-8):
+def invariant_tunes_6D(Ax,Ay,Az,Qx,Qy,Qz,limit_search=-1,max_n=20,max_alias=5,filter_Q = None,handpicked_QxQy = None,return_optimization=False,force_proper_plane = False,warning_tol = 1e-8):
 
     # Initialisation
     #---------------------------------------
@@ -53,8 +70,13 @@ def invariant_tunes_6D(Ax,Ay,Az,Qx,Qy,Qz,limit_search=-1,max_n=20,max_alias=5,fi
         ny      = linear_combinations(Qy,Qvec = Q123,max_n=max_n,max_alias=max_alias,warning_tol=warning_tol)
         nz      = linear_combinations(Qz,Qvec = Q123,max_n=max_n,max_alias=max_alias,warning_tol=warning_tol)
 
+        Ix = invariant([Ax,Ay,Az],[nx,ny,nz],idx=0)
+        Iy = invariant([Ax,Ay,Az],[nx,ny,nz],idx=1)
         Iz = invariant([Ax,Ay,Az],[nx,ny,nz],idx=2)
-        Iz_estimate.append(Iz)
+        if Ix<0 or Iy <0:
+            Iz_estimate.append(np.inf)
+        else:
+            Iz_estimate.append(Iz)
     Iz_estimate = np.array(Iz_estimate)
     #---------------------------------------------------------------------
 
@@ -78,13 +100,24 @@ def invariant_tunes_6D(Ax,Ay,Az,Qx,Qy,Qz,limit_search=-1,max_n=20,max_alias=5,fi
     #---------------------------------------------------------------------
 
 
+    # Return the line from proper plane if present:
+    #---------------------------------------------------------------------
+    if force_proper_plane:
+        nx  = linear_combinations(Qx,Qvec = Q123_match,max_n=max_n,max_alias=max_alias,warning_tol=warning_tol)
+        ny  = linear_combinations(Qy,Qvec = Q123_match,max_n=max_n,max_alias=max_alias,warning_tol=warning_tol)
+        if (1,0,0,0) in nx:
+            Q123_match[0] = Qx[nx.index((1,0,0,0))]
+        if (0,1,0,0) in ny:
+            Q123_match[1] = Qy[ny.index((0,1,0,0))]
+    #---------------------------------------------------------------------
+
+
     if return_optimization:
         sort_match  = np.argsort(np.abs(Iz_estimate-Iz_target))
-        if Ixx<Ixy:
-            # mislabeled Q! (just ensuring the first element is the matching tune, the rest is irrelevant)
-            return np.array([[Q12[1],Q12[0]] + [tune_z] for Q12 in Q12_comb])[sort_match], np.array(np.abs(Iz_estimate-Iz_target))[sort_match]
+        if Q123_match[0]<Q123_match[1]:
+            return np.array([sorted(Q12) + [tune_z] for Q12 in Q12_comb])[sort_match], np.array(np.abs(Iz_estimate-Iz_target))[sort_match]
         else:
-            return np.array([list(Q12) + [tune_z] for Q12 in Q12_comb])[sort_match], np.array(np.abs(Iz_estimate-Iz_target))[sort_match]
+            return np.array([sorted(Q12)[::-1] + [tune_z] for Q12 in Q12_comb])[sort_match], np.array(np.abs(Iz_estimate-Iz_target))[sort_match]
         
     else:
         return Q123_match

@@ -15,6 +15,7 @@ from .toolbox import (
     henon_map_4D,
 )
 from .windowing import hann
+from .indexing import linear_combinations
 
 
 # backward compatibility
