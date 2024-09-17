@@ -21,6 +21,54 @@ def pdq_integral(A,n,Theta,idx=0):
     return 1/2 * sum(np.abs(Ak)*np.abs(Aj)*nj[idx]*np.cos(phik-phij)    for nk,Ak,phik in zip(n,A,phi) 
                                                                         for nj,Aj,phij in zip(n,A,phi) 
                                                                         if nj[idx]==nk[idx])
+
+
+def sin_integral(Q0,nk,nj,phik,phij):
+    # https://www.wolframalpha.com/input?i=integrate+sin%28nx%2Bb%29*sin%28mx%2Bc%29+from+0+to+a
+
+    a = 2*np.pi*Q0
+    n = nk
+    m = nj
+    b = phik
+    c = phij
+
+    if (n != m) and (n != -m) and (n*m!=0):
+        return 1/2 * ( np.sin(b-c) - np.sin(a*(n-m) + b - c))/(m-n) + 1/2*(np.sin(b+c) - np.sin(a*(m+n) + b + c))/(m+n)
+    
+    elif (n == m) and (n*m!=0):
+        return (a*n*np.cos(b-c) - np.sin(a*n)*np.cos(a*n + b + c))/(2*n)
+    
+    elif (n == -m) and (n*m!=0):
+        return (np.sin(a*n)*np.cos(a*n + b - c) - a*n*np.cos(b+c))/(2*n)
+
+    elif (n == 0) and (m != 0):
+        return np.sin(b)*(np.cos(c) - np.cos(a*m + c))/m
+    
+    elif (n != 0) and (m == 0):
+        return np.sin(c)*(np.cos(b) - np.cos(a*n + b))/n
+    
+    elif (n == 0) and (m == 0):
+        return a*np.sin(b)*np.sin(c)
+    
+    else:
+        print(n,m)
+        return 0
+
+
+
+def pdq_partial_integral(Q0,A,n,Theta,idx=0):
+    if not isinstance(Theta,list):
+        Theta = [Theta]
+    assert len(Theta) == len(n[0])-2, 'Theta should include all non-integrated angles, i.e. [Theta_y,Theta_zeta] for x-plane integration'
+    
+    # Computing the non-integrated phase (works for any number of dimensions)
+    n_tmp   = [nk[:idx] + nk[idx+1:] for nk in n]
+    phi     = [np.angle(Ak) + sum([nk[i]*Theta[i] for i in range(len(Theta))]) for Ak,nk in zip(A,n_tmp)]
+    
+    # Computing the full partial integral (going from N to N+1) https://www.wolframalpha.com/input?i=integrate+sin%28nx%2Bb%29*sin%28mx%2Bc%29+from+0+to+a    
+    return 1/2/np.pi * sum(np.abs(Ak)*np.abs(Aj)*nj[idx]*sin_integral(Q0,nk[idx],nj[idx],phik,phij)     for nk,Ak,phik in zip(n,A,phi) 
+                                                                                                        for nj,Aj,phij in zip(n,A,phi))
+    
         
         
 

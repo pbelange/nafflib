@@ -20,7 +20,7 @@ def N_GRID(dim,max_n,max_alias=None):
         _grid   = np.mgrid[ -max_n:max_n+1,-max_n:max_n+1,-max_n:max_n+1,-max_alias:max_alias+1]
 
     # Flattening the grid
-    n_grid      = [_n.ravel().astype(np.int8) for _n in _grid]
+    n_grid      = [_n.ravel().astype(np.int16) for _n in _grid]
 
     # Preordering the grid with something similar to the LHC (just to speed up argsort!)
     dummy_tunes = [0.31,0.32,-2e-3,1]
