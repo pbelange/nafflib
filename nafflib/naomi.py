@@ -74,9 +74,9 @@ def pdq_partial_integral(Q0,A,n,Theta,idx=0):
 
 
 
-def invariant(A_list,n_list,idx=0):
+def invariant(A_list,n_list,gemitt_list = [1,1,1],idx=0):
     assert len(A_list) == len(n_list)
-    return np.sum([pdq_avg_integral(A_plane,n_plane,idx) for A_plane,n_plane in zip(A_list,n_list)])
+    return np.sum([gemitt_plane * pdq_avg_integral(A_plane,n_plane,idx) for A_plane,n_plane,gemitt_plane in zip(A_list,n_list,gemitt_list)])
 
 
 
